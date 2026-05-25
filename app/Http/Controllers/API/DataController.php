@@ -155,40 +155,40 @@ class DataController extends Controller
         $cacheKey = 'data_fsd_' . $alias;
         $cacheDuration = 60 * 24; // 24 hours in minutes
 
-        $data = Cache::remember($cacheKey, $cacheDuration, function () use ($alias) {
-            $user = User::where('alias', $alias)->first();
+        // $data = Cache::remember($cacheKey, $cacheDuration, function () use ($alias) {
+        $user = User::where('alias', $alias)->first();
 
-            if (!$user || !$user->id_sdm) {
-                return [];
-            }
+        if (!$user || !$user->id_sdm) {
+            return [];
+        }
 
-            $idSdm = $user->id_sdm;
+        $idSdm = $user->id_sdm;
 
-            return Publikasi::with([
-                'jenisPublikasi' => function ($query) {
-                    $query->where(function ($q) {
-                        $q->where('nama', 'like', 'Jurnal%')
-                            ->orWhere('nama', 'like', 'Prosiding%');
-                    });
-                },
-                'detailPublikasi',
-                'penulis'
-            ])
-                ->whereHas('penulis', function ($query) use ($idSdm) {
-                    $query->where('id_sdm', $idSdm);
-                })
-                ->orderByDesc('tanggal')
-                ->get()
-                ->map(function ($item) {
-                    $item->tahun = $item->tanggal
-                        ? Carbon::parse($item->tanggal)->year
-                        : null;
-
-                    $item->tipe = optional($item->jenisPublikasi)->nama;
-
-                    return $item;
+        $data = Publikasi::with([
+            'jenisPublikasi' => function ($query) {
+                $query->where(function ($q) {
+                    $q->where('nama', 'like', 'Jurnal%')
+                        ->orWhere('nama', 'like', 'Prosiding%');
                 });
-        });
+            },
+            'detailPublikasi',
+            'penulis'
+        ])
+            ->whereHas('penulis', function ($query) use ($idSdm) {
+                $query->where('id_sdm', $idSdm);
+            })
+            ->orderByDesc('tanggal')
+            ->get()
+            ->map(function ($item) {
+                $item->tahun = $item->tanggal
+                    ? Carbon::parse($item->tanggal)->year
+                    : null;
+
+                $item->tipe = optional($item->jenisPublikasi)->nama;
+
+                return $item;
+            });
+        // });
 
         return response()->json($data, 200);
     }
