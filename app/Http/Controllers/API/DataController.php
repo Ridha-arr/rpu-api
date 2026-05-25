@@ -157,7 +157,7 @@ class DataController extends Controller
 
         $data = Cache::remember($cacheKey, $cacheDuration, function () use ($alias) {
             $user = User::where('alias', $alias)->first();
-            
+
             if (!$user || !$user->id_sdm) {
                 return [];
             }
@@ -1021,19 +1021,18 @@ class DataController extends Controller
     {
         $jenis = Publikasi::query()
             ->join('jenis_publikasis', 'jenis_publikasis.id', '=', 'publikasis.jenis_publikasi_id')
-            ->select('jenis_publikasis.id', 'jenis_publikasis.nama', DB::raw('count(publikasis.id) as total'))
+            ->whereIn('jenis_publikasis.nama', [
+                'Jurnal',
+                'Prosiding'
+            ])
+            ->select(
+                'jenis_publikasis.id',
+                'jenis_publikasis.nama',
+                DB::raw('count(publikasis.id) as total')
+            )
             ->groupBy('jenis_publikasis.id', 'jenis_publikasis.nama')
             ->orderBy('jenis_publikasis.nama')
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'id' => $item->id,
-                    'nama' => $item->nama,
-                    'key' => Str::slug($item->nama, '_'),
-                    'total' => (int) $item->total,
-                ];
-            });
-
+            ->get();
         $legacy = [];
         foreach ($jenis as $item) {
             $legacy[$item['key']] = $item['total'];
