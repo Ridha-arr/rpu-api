@@ -165,7 +165,7 @@ class DataController extends Controller
         $idSdm = $user->id_sdm;
 
         $data = Publikasi::with([
-            'jenisPublikasi:id,nama' => function ($query) {
+            'jenisPublikasi' => function ($query) {
                 $query->where(function ($q) {
                     $q->where('nama', 'like', 'Jurnal%')
                         ->orWhere('nama', 'like', 'Prosiding%');
