@@ -107,6 +107,6 @@ Route::get('/fakultas', [DataController::class, 'fakultas']);
 Route::get('/prodi/{fakultas_id}', [DataController::class, 'prodi']);
 Route::get('/jenis-publikasi', [DataController::class, 'jenisPublikasi']);
 Route::get('/grafikJurnal', [DataController::class, 'GrafikJurnal']);
-Route::get('/sync/fakultas', [DataController::class, 'syncFakultas']);
-Route::get('/sync/prodi', [DataController::class, 'syncProdi']);
+//Route::get('/sync/fakultas', [DataController::class, 'syncFakultas']);
+//Route::get('/sync/prodi', [DataController::class, 'syncProdi']);
 Route::get('/data-fsd/{alias}', [DataController::class, 'dataFSD']);
