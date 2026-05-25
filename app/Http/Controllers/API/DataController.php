@@ -1021,10 +1021,10 @@ class DataController extends Controller
     {
         $jenis = Publikasi::query()
             ->join('jenis_publikasis', 'jenis_publikasis.id', '=', 'publikasis.jenis_publikasi_id')
-            ->whereIn('jenis_publikasis.nama', [
-                'Jurnal',
-                'Prosiding'
-            ])
+            ->where(function ($query) {
+                $query->where('jenis_publikasis.nama', 'like', 'Jurnal%')
+                    ->orWhere('jenis_publikasis.nama', 'like', 'Prosiding%');
+            })
             ->select(
                 'jenis_publikasis.id',
                 'jenis_publikasis.nama',
@@ -1032,7 +1032,15 @@ class DataController extends Controller
             )
             ->groupBy('jenis_publikasis.id', 'jenis_publikasis.nama')
             ->orderBy('jenis_publikasis.nama')
-            ->get();
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'nama' => $item->nama,
+                    'key' => Str::slug($item->nama, '_'),
+                    'total' => (int) $item->total,
+                ];
+            });
         $legacy = [];
         foreach ($jenis as $item) {
             $legacy[$item['key']] = $item['total'];
