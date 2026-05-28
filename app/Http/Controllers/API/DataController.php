@@ -654,12 +654,12 @@ class DataController extends Controller
         $mappedDetail = $this->mapSisterDetailPublikasi($publikasiId, $detail);
 
         $sintaAkred = null;
-        if (!empty($mappedDetail['issn'])) {
-            $sintaAkred = $this->scrapeSintaAkred($mappedDetail['issn']);
-        }
-        if (!$sintaAkred && !empty($mappedDetail['e_issn'])) {
-            $sintaAkred = $this->scrapeSintaAkred($mappedDetail['e_issn']);
-        }
+        // if (!empty($mappedDetail['issn'])) {
+        //     $sintaAkred = $this->scrapeSintaAkred($mappedDetail['issn']);
+        // }
+        // if (!$sintaAkred && !empty($mappedDetail['e_issn'])) {
+        //     $sintaAkred = $this->scrapeSintaAkred($mappedDetail['e_issn']);
+        // }
 
         $mappedDetail['sinta_akred'] = $sintaAkred;
 
