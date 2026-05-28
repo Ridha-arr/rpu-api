@@ -156,7 +156,11 @@ class DataController extends Controller
         $cacheDuration = 60 * 24; // 24 hours in minutes
 
         // $data = Cache::remember($cacheKey, $cacheDuration, function () use ($alias) {
-        $user = User::where('alias', $alias)->orWhere('username', $alias)->first();
+        $user = User::where('username', $alias)->first();
+
+        if (!$user) {
+            $user = User::where('alias', $alias)->first();
+        }
 
         if (!$user || !$user->id_sdm) {
             return [];
