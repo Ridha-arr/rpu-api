@@ -1277,7 +1277,8 @@ class DataController extends Controller
         $keyword = str_replace('_', ' ', $value);
 
         return User::with(['profile.fakultas', 'pendidikan'])
-            ->whereRaw('LOWER(alias) = ?', [Str::lower($value)])
+            ->whereRaw('LOWER(username) = ?', [Str::lower($value)])
+            ->orWhereRaw('LOWER(alias) = ?', [Str::lower($value)])
             ->orWhereRaw('LOWER(name) = ?', [Str::lower($keyword)])
             ->first();
     }
