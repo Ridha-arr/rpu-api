@@ -156,7 +156,7 @@ class DataController extends Controller
         $cacheDuration = 60 * 24; // 24 hours in minutes
 
         // $data = Cache::remember($cacheKey, $cacheDuration, function () use ($alias) {
-        $user = User::where('alias', $alias)->first();
+        $user = User::where('alias', $alias)->orWhere('username', $alias)->first();
 
         if (!$user || !$user->id_sdm) {
             return [];
@@ -562,6 +562,44 @@ class DataController extends Controller
         return $result;
     }
 
+    private function scrapeSintaAkred(?string $issn)
+    {
+        if (!$issn) {
+            return null;
+        }
+
+        $issn = trim($issn);
+        if ($issn === '' || $issn === '-') {
+            return null;
+        }
+
+        try {
+            $response = Http::timeout(10)->get('https://sinta.kemdiktisaintek.go.id/journals', [
+                'q' => $issn
+            ]);
+
+            if ($response->successful()) {
+                $html = $response->body();
+                Log::warning('SINTA scraping Success for ISSN: ' . $issn, [
+                    'message' => $html
+                ]);
+                if (preg_match('/class=["\']?el el-certificate["\']?[^>]*>\s*(?:<\/i>)?\s*S([1-6])\b/i', $html, $matches)) {
+                    return (int) $matches[1];
+                }
+
+                if (preg_match('/S([1-6])\s*<span[^>]*class=["\']text-stat/i', $html, $matches)) {
+                    return (int) $matches[1];
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('SINTA scraping failed or timed out for ISSN: ' . $issn, [
+                'message' => $e->getMessage()
+            ]);
+        }
+
+        return null;
+    }
+
     private function syncSisterPublikasiDetail(string $baseUrl, string $token, string $publikasiId)
     {
         $result = [
@@ -613,9 +651,21 @@ class DataController extends Controller
             return $result;
         }
 
+        $mappedDetail = $this->mapSisterDetailPublikasi($publikasiId, $detail);
+
+        $sintaAkred = null;
+        if (!empty($mappedDetail['issn'])) {
+            $sintaAkred = $this->scrapeSintaAkred($mappedDetail['issn']);
+        }
+        if (!$sintaAkred && !empty($mappedDetail['e_issn'])) {
+            $sintaAkred = $this->scrapeSintaAkred($mappedDetail['e_issn']);
+        }
+
+        $mappedDetail['sinta_akred'] = $sintaAkred;
+
         DetailPublikasi::updateOrCreate(
             ['publikasi_id' => $publikasiId],
-            $this->mapSisterDetailPublikasi($publikasiId, $detail)
+            $mappedDetail
         );
         $result['detail_updated']++;
 
