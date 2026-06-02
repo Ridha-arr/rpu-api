@@ -265,7 +265,6 @@ class AuthController extends Controller
                     Profile::updateOrCreate(
                         ['user_id' => $user->id],
                         [
-                            'about' => $data['about'] ?? null,
                             'fakultas_id' => $prodi->fakultas_id ?? null,
                             'prodi_id' => $prodi->id ?? null,
                             'foto' => $data['identitas']['foto'] ?? null,
