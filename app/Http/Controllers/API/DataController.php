@@ -860,6 +860,7 @@ class DataController extends Controller
             'tanggal' => $this->parseDate($record['tanggal'] ?? $record['tanggal_terbit'] ?? $record['tgl_terbit'] ?? null),
             'kategori_kegiatan' => $this->stringValue($record['kategori_kegiatan'] ?? ''),
             'asal_data' => $record['asal_data'] ?? 'SISTER',
+            'status' => 1,
             'bidang_keilmuan' => $this->jsonValue($record['bidang_keilmuan'] ?? null),
         ];
     }
@@ -1306,6 +1307,202 @@ class DataController extends Controller
         }
         return response()->json($data, 200);
     }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'judul' => 'required|string',
+            'jenis_publikasi_id' => 'required|exists:jenis_publikasis,id',
+            'tanggal' => 'required|date',
+            'kategori_kegiatan' => 'nullable|string',
+            'quartile' => 'nullable|string',
+            'sinta_akred' => 'nullable|integer|min:1|max:6',
+            'nama_jurnal' => 'nullable|string',
+            'tautan' => 'nullable|string',
+            'a_klaim_bkd' => 'nullable|boolean',
+        ]);
+
+        $idSdm = auth()->user()->id_sdm;
+        if (!$idSdm) {
+            return response()->json([
+                'message' => 'id_sdm user belum tersedia.',
+            ], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $publikasiId = (string) Str::uuid();
+
+            $publikasi = Publikasi::create([
+                'id' => $publikasiId,
+                'id_kategori_kegiatan' => 0,
+                'a_klaim_bkd' => (bool)$request->a_klaim_bkd,
+                'wkt_klaim_bkd' => (bool)$request->a_klaim_bkd ? now() : null,
+                'judul' => $request->judul,
+                'quartile' => $request->quartile,
+                'jenis_publikasi_id' => $request->jenis_publikasi_id,
+                'tanggal' => $request->tanggal,
+                'kategori_kegiatan' => $request->kategori_kegiatan ?? '-',
+                'asal_data' => 'RPU',
+            ]);
+
+            $jenisPub = JenisPublikasi::find($request->jenis_publikasi_id);
+            
+            $qVal = 0;
+            if ($request->quartile) {
+                $cleanQ = preg_replace('/[^0-9]/', '', $request->quartile);
+                $qVal = is_numeric($cleanQ) ? (int)$cleanQ : 0;
+            }
+
+            DetailPublikasi::create([
+                'publikasi_id' => $publikasiId,
+                'jenis_publikasi_id' => $request->jenis_publikasi_id,
+                'judul' => $request->judul,
+                'judul_artikel' => $request->judul,
+                'nama_jurnal' => $request->nama_jurnal,
+                'tanggal' => $request->tanggal,
+                'tautan' => $request->tautan,
+                'quartile' => $qVal,
+                'sinta_akred' => $request->sinta_akred,
+                'jenis_publikasi' => $jenisPub ? $jenisPub->nama : null,
+                'kategori_kegiatan' => $request->kategori_kegiatan ?? '-',
+                'asal_data' => 'RPU',
+            ]);
+
+            Penulis::create([
+                'id' => (string) Str::uuid(),
+                'publikasi_id' => $publikasiId,
+                'id_sdm' => $idSdm,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Data publikasi RPU berhasil ditambahkan.',
+                'data' => $publikasi
+            ], 201);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Gagal menambahkan publikasi RPU', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'message' => 'Gagal menyimpan data publikasi RPU: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function reviewerData()
+    {
+        $publikasis = Publikasi::with([
+            'jenisPublikasi',
+            'penulis.user'
+        ])
+        ->where('asal_data', 'RPU')
+        ->orderBy('tanggal', 'asc')
+        ->get()
+        ->map(function ($item) {
+            $item->tipe = optional($item->jenisPublikasi)->nama;
+            $item->tahun = $item->tanggal ? \Carbon\Carbon::parse($item->tanggal)->year : null;
+            
+            // Get user/lecturer name from penulis relation
+            $penulis = $item->penulis->first();
+            $item->nama_dosen = $penulis && $penulis->user ? $penulis->user->name : '-';
+            $item->nip_dosen = $penulis && $penulis->user ? $penulis->user->username : '-';
+
+            // Look up main file in FilePublikasi
+            $mainFile = FilePublikasi::where('table_id', $item->id)->where('jenis', 'file')->first();
+            $item->file = $mainFile ? $mainFile->file : null;
+
+            return $item;
+        });
+
+        return response()->json($publikasis, 200);
+    }
+
+    public function reviewerPublikasi($id)
+    {
+        $user = User::find($id);
+        if (!$user || !$user->id_sdm) {
+            return response()->json([], 200);
+        }
+
+        $publikasis = Publikasi::with([
+            'jenisPublikasi',
+            'fileReview',
+            'fileTurnitin',
+            'fileKoresponden'
+        ])
+        ->whereHas('penulis', function ($query) use ($user) {
+            $query->where('id_sdm', $user->id_sdm);
+        })
+        ->where('asal_data', 'RPU')
+        ->orderBy('tanggal', 'asc')
+        ->get()
+        ->map(function ($item) {
+            $item->tipe = optional($item->jenisPublikasi)->nama;
+            $item->tahun = $item->tanggal ? \Carbon\Carbon::parse($item->tanggal)->year : null;
+            
+            // Look up main file in FilePublikasi
+            $mainFile = FilePublikasi::where('table_id', $item->id)->where('jenis', 'file')->first();
+            $item->file = $mainFile ? $mainFile->file : null;
+
+            return $item;
+        });
+
+        return response()->json([
+            'user' => [
+                'nama' => $user->name,
+                'nip' => $user->username
+            ],
+            'publikasi' => $publikasis
+        ], 200);
+    }
+
+    public function reviewerVerifikasi(Request $request)
+    {
+        $request->validate([
+            'publikasi_id' => 'required|exists:publikasis,id',
+            'status' => 'required|in:1,2,3',
+            'komentar' => 'nullable|string',
+        ]);
+
+        $publikasi = Publikasi::find($request->publikasi_id);
+        if ($publikasi->asal_data !== 'RPU') {
+            return response()->json([
+                'message' => 'Hanya publikasi dengan asal data RPU yang dapat diverifikasi.'
+            ], 422);
+        }
+
+        $publikasi->status = $request->status;
+        $publikasi->komentar = $request->status == 2 ? $request->komentar : null;
+        $publikasi->save();
+
+        return response()->json([
+            'message' => 'Verifikasi berhasil disimpan.',
+            'data' => $publikasi
+        ]);
+    }
+
+    public function reviewerVerifikasiDelete($id)
+    {
+        $publikasi = Publikasi::find($id);
+        if (!$publikasi) {
+            return response()->json([
+                'message' => 'Publikasi tidak ditemukan.'
+            ], 404);
+        }
+
+        $publikasi->status = 0; // reset to draft
+        $publikasi->komentar = null;
+        $publikasi->save();
+
+        return response()->json([
+            'message' => 'Verifikasi berhasil dibatalkan.'
+        ]);
+    }
+
     public function publikasiASId($id)
     {
         $user = User::find($id);

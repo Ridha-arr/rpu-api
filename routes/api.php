@@ -82,11 +82,13 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
                 'username',
                 'alias',
                 'email',
-                'name'
+                'name',
+                'role'
             )->find(auth()->user()->id);
     });
     Route::post('/profile-post', [ProfilController::class, 'store']);
     Route::get('/profile-get', [ProfilController::class, 'show']);
+    Route::post('/profile/sync-sinta', [ProfilController::class, 'syncSinta']);
     Route::post('/publikasi-post', [PublikasiController::class, 'store']);
     Route::get('/publikasi-get/{id}', [PublikasiController::class, 'show']);
     Route::get('/publikasi-count', [PublikasiController::class, 'count']);
@@ -94,7 +96,13 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::delete('/publikasi-delete/{id}', [PublikasiController::class, 'destroy']);
 
     Route::get('/data', [DataController::class, 'index']);
+    Route::post('/data', [DataController::class, 'store']);
     Route::post('/data/sync', [DataController::class, 'sync'])->middleware('throttle:5,1');
+
+    Route::get('/reviewer/data', [DataController::class, 'reviewerData']);
+    Route::get('/reviewer/publikasi/{id}', [DataController::class, 'reviewerPublikasi']);
+    Route::post('/reviewer/verifikasi', [DataController::class, 'reviewerVerifikasi']);
+    Route::delete('/reviewer/verifikasi-delete/{id}', [DataController::class, 'reviewerVerifikasiDelete']);
 
     Route::post('/fileUpload', [DataController::class, 'file']);
     Route::post('/logout', [App\Http\Controllers\API\AuthController::class, 'logout']);

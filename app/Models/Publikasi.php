@@ -27,4 +27,19 @@ class Publikasi extends Model
     {
         return $this->hasMany(Penulis::class, 'publikasi_id');
     }
+
+    public function fileReview()
+    {
+        return $this->hasMany(FilePublikasi::class, 'table_id', 'id')->where('jenis', 'review');
+    }
+
+    public function fileTurnitin()
+    {
+        return $this->hasMany(FilePublikasi::class, 'table_id', 'id')->where('jenis', 'turnitin');
+    }
+
+    public function fileKoresponden()
+    {
+        return $this->hasMany(FilePublikasi::class, 'table_id', 'id')->where('jenis', 'koresponden');
+    }
 }

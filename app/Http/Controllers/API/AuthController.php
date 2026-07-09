@@ -208,7 +208,10 @@ class AuthController extends Controller
         }
         $user = User::updateOrCreate(
             ['username' => $username],
-            ['email' => $email]
+            [
+                'email' => $email,
+                'name' => $name
+            ]
         );
 
         return $user;

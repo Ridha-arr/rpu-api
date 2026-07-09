@@ -13,6 +13,19 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;
     protected $connection = 'mysql';
     protected $guarded = [];
+    protected $appends = ['level'];
+
+    public function getLevelAttribute()
+    {
+        if ($this->role === 'reviewer') {
+            return 1;
+        }
+        if ($this->role === 'admin') {
+            return 2;
+        }
+        return 3;
+    }
+
     /**
      * The attributes that are mass assignable.
      *
