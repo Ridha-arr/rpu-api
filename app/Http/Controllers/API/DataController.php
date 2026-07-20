@@ -1146,6 +1146,7 @@ class DataController extends Controller
                 'user' => [
                     'id' => $user->id,
                     'nama' => $user->name,
+                    'alias' => $user->alias,
                     'profile' => $user->profile
                 ],
                 'gelar_depan' => '',
@@ -1347,7 +1348,7 @@ class DataController extends Controller
             ]);
 
             $jenisPub = JenisPublikasi::find($request->jenis_publikasi_id);
-            
+
             $qVal = 0;
             if ($request->quartile) {
                 $cleanQ = preg_replace('/[^0-9]/', '', $request->quartile);
@@ -1399,24 +1400,24 @@ class DataController extends Controller
             'jenisPublikasi',
             'penulis.user'
         ])
-        ->where('asal_data', 'RPU')
-        ->orderBy('tanggal', 'asc')
-        ->get()
-        ->map(function ($item) {
-            $item->tipe = optional($item->jenisPublikasi)->nama;
-            $item->tahun = $item->tanggal ? \Carbon\Carbon::parse($item->tanggal)->year : null;
-            
-            // Get user/lecturer name from penulis relation
-            $penulis = $item->penulis->first();
-            $item->nama_dosen = $penulis && $penulis->user ? $penulis->user->name : '-';
-            $item->nip_dosen = $penulis && $penulis->user ? $penulis->user->username : '-';
+            ->where('asal_data', 'RPU')
+            ->orderBy('tanggal', 'asc')
+            ->get()
+            ->map(function ($item) {
+                $item->tipe = optional($item->jenisPublikasi)->nama;
+                $item->tahun = $item->tanggal ? \Carbon\Carbon::parse($item->tanggal)->year : null;
 
-            // Look up main file in FilePublikasi
-            $mainFile = FilePublikasi::where('table_id', $item->id)->where('jenis', 'file')->first();
-            $item->file = $mainFile ? $mainFile->file : null;
+                // Get user/lecturer name from penulis relation
+                $penulis = $item->penulis->first();
+                $item->nama_dosen = $penulis && $penulis->user ? $penulis->user->name : '-';
+                $item->nip_dosen = $penulis && $penulis->user ? $penulis->user->username : '-';
 
-            return $item;
-        });
+                // Look up main file in FilePublikasi
+                $mainFile = FilePublikasi::where('table_id', $item->id)->where('jenis', 'file')->first();
+                $item->file = $mainFile ? $mainFile->file : null;
+
+                return $item;
+            });
 
         return response()->json($publikasis, 200);
     }
@@ -1434,22 +1435,22 @@ class DataController extends Controller
             'fileTurnitin',
             'fileKoresponden'
         ])
-        ->whereHas('penulis', function ($query) use ($user) {
-            $query->where('id_sdm', $user->id_sdm);
-        })
-        ->where('asal_data', 'RPU')
-        ->orderBy('tanggal', 'asc')
-        ->get()
-        ->map(function ($item) {
-            $item->tipe = optional($item->jenisPublikasi)->nama;
-            $item->tahun = $item->tanggal ? \Carbon\Carbon::parse($item->tanggal)->year : null;
-            
-            // Look up main file in FilePublikasi
-            $mainFile = FilePublikasi::where('table_id', $item->id)->where('jenis', 'file')->first();
-            $item->file = $mainFile ? $mainFile->file : null;
+            ->whereHas('penulis', function ($query) use ($user) {
+                $query->where('id_sdm', $user->id_sdm);
+            })
+            ->where('asal_data', 'RPU')
+            ->orderBy('tanggal', 'asc')
+            ->get()
+            ->map(function ($item) {
+                $item->tipe = optional($item->jenisPublikasi)->nama;
+                $item->tahun = $item->tanggal ? \Carbon\Carbon::parse($item->tanggal)->year : null;
 
-            return $item;
-        });
+                // Look up main file in FilePublikasi
+                $mainFile = FilePublikasi::where('table_id', $item->id)->where('jenis', 'file')->first();
+                $item->file = $mainFile ? $mainFile->file : null;
+
+                return $item;
+            });
 
         return response()->json([
             'user' => [
