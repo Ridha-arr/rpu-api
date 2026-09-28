@@ -28,7 +28,7 @@ class PublicationSyncController extends Controller
         $page = $data['page'] ?? 1;
         $result = Publikasi::query()
             ->with(['jenisPublikasi:id,nama', 'detailPublikasi', 'penulis.user:id_sdm,name'])
-            ->whereHas('penulis', fn ($query) => $query->whereIn('id_sdm', $data['id_sdm']))
+            ->whereHas('penulis', fn($query) => $query->whereIn('id_sdm', $data['id_sdm']))
             ->orderBy('id')
             ->paginate(100, ['id', 'judul', 'tanggal', 'quartile', 'jenis_publikasi_id'], 'page', $page);
 
@@ -41,6 +41,7 @@ class PublicationSyncController extends Controller
                     'tanggal' => $item->tanggal,
                     'quartile' => $item->quartile,
                     'jenis_publikasi' => optional($item->jenisPublikasi)->nama,
+                    'asal_data' => $item->asal_data,
                     'detail' => $detail ? [
                         'nama_jurnal' => $detail->nama_jurnal,
                         'penerbit' => $detail->penerbit,
@@ -50,7 +51,7 @@ class PublicationSyncController extends Controller
                         'nomor' => $detail->nomor,
                         'sinta_akred' => $detail->sinta_akred,
                     ] : null,
-                    'penulis' => $item->penulis->map(fn ($author) => [
+                    'penulis' => $item->penulis->map(fn($author) => [
                         'id' => $author->id,
                         'id_sdm' => $author->id_sdm,
                         'nama' => optional($author->user)->name,
