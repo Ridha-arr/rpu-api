@@ -12,6 +12,7 @@ use App\Http\Controllers\API\PosterController;
 use App\Http\Controllers\API\ProfilController;
 use App\Http\Controllers\API\ProsidingController;
 use App\Http\Controllers\API\PublikasiController;
+use App\Http\Controllers\API\PublicationSyncController;
 use App\Http\Controllers\API\ReviewerController;
 use App\Http\Controllers\API\SeminarController;
 use App\Http\Controllers\API\WorkshopsController;
@@ -72,6 +73,8 @@ Route::get('/publikasiall-get/{state}', [DataController::class, 'publikasiall'])
 Route::get('/repo', [DataController::class, 'repo']);
 Route::get('/cari/{search}', [DataController::class, 'cari']);
 Route::get('/publikasi/{nama}/{publikasi}', [DataController::class, 'publikasi']);
+Route::post('/integrations/fkip/publikasi', [PublicationSyncController::class, 'index'])
+    ->middleware('throttle:30,1');
 
 //Protecting Routes
 Route::group(['middleware' => ['auth:sanctum']], function () {

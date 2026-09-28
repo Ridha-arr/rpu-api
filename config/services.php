@@ -75,6 +75,10 @@ return [
         'key' => env('PUBLICATION_API_KEY'),
     ],
 
+    'publication_sync' => [
+        'key' => env('PUBLICATION_SYNC_API_KEY'),
+    ],
+
     'sister' => [
         'url' => rtrim((string) env('SISTER_API_URL'), '/'),
         'username' => env('SISTER_API_USERNAME'),
