@@ -673,12 +673,44 @@ class DataController extends Controller
         );
         $result['detail_updated']++;
 
-        foreach ($this->extractSisterPenulis($detail) as $item) {
+        foreach ($this->extractSisterPenulis($detail) as $index => $item) {
             $idSdm = $this->extractPenulisIdSdm($item);
 
             if (!$idSdm) {
                 $result['penulis_skipped']++;
                 continue;
+            }
+
+            $urutan = null;
+            if (isset($item['urutan']) && is_numeric($item['urutan'])) {
+                $urutan = (int) $item['urutan'];
+            } elseif (isset($item['urutan_penulis']) && is_numeric($item['urutan_penulis'])) {
+                $urutan = (int) $item['urutan_penulis'];
+            } elseif (isset($item['urutan_ke']) && is_numeric($item['urutan_ke'])) {
+                $urutan = (int) $item['urutan_ke'];
+            } else {
+                $urutan = $index + 1;
+            }
+
+            $peran = null;
+            if (isset($item['peran'])) {
+                $peran = is_array($item['peran']) ? ($item['peran']['nama'] ?? $item['peran']['nama_peran'] ?? null) : $item['peran'];
+            } elseif (isset($item['peran_penulis'])) {
+                $peran = is_array($item['peran_penulis']) ? ($item['peran_penulis']['nama'] ?? null) : $item['peran_penulis'];
+            } elseif (isset($item['nama_peran'])) {
+                $peran = $item['nama_peran'];
+            }
+
+            $correspondingAuthor = false;
+            $rawCorresponding = $item['corresponding_author'] ?? $item['corresponding'] ?? $item['stat_corresponding'] ?? $item['author_corresponding'] ?? null;
+            if ($rawCorresponding !== null) {
+                if (is_bool($rawCorresponding)) {
+                    $correspondingAuthor = $rawCorresponding;
+                } elseif (is_numeric($rawCorresponding)) {
+                    $correspondingAuthor = ((int) $rawCorresponding) === 1;
+                } elseif (is_string($rawCorresponding)) {
+                    $correspondingAuthor = in_array(strtolower(trim($rawCorresponding)), ['1', 'true', 'ya', 'yes']);
+                }
             }
 
             try {
@@ -688,7 +720,10 @@ class DataController extends Controller
                         'id_sdm' => $idSdm,
                     ],
                     [
-                        'id' => $item['id_penulis'],
+                        'id' => $item['id_penulis'] ?? $item['id'] ?? (string) Str::uuid(),
+                        'urutan' => $urutan,
+                        'peran' => $peran,
+                        'corresponding_author' => $correspondingAuthor,
                     ]
                 );
 
